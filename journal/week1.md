@@ -211,7 +211,8 @@ class NotificationsActivities:
 ```
 Open the port 3000 and see the changes
 
-![frontend](https://user-images.githubusercontent.com/102387885/221343817-6abb456e-5f80-4e99-9b10-f3492c64b166.png)
+![week1Notification](https://user-images.githubusercontent.com/102387885/222880854-0d781168-4d8d-4b00-98d5-dcd60592b196.png)
+
 
 ### DynamoDB and Postgresql
 Open the ```docker-compose.yml``` file and enter the contents for DynamoDB and Postgresql
