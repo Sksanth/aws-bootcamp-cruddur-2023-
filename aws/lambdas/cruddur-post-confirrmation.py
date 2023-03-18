@@ -24,22 +24,28 @@ def lambda_handler(event, context):
       """
       print('SQL Statement ----')
       print(sql)
-      conn = psycopg2.connect(os.getenv('CONNECTION_URL'))
-      cur = conn.cursor()
+
+
+     # conn = psycopg2.connect(os.getenv('CONNECTION_URL'))
+     # cur = conn.cursor()
       params = [
         user_display_name,
         user_email,
         user_handle,
         user_cognito_id
       ]
-      cur.execute(sql,*params)
+      with psycopg2.connect(os.getenv('CONNECTION_URL')) as conn:
+      with conn.cursor() as cur:
+      cur.execute(sql,params)
       conn.commit() 
 
     except (Exception, psycopg2.DatabaseError) as error:
       print(error)
+    else:
+        print("Data inserted successfully")
     finally:
-      if conn is not None:
-          cur.close()
-          conn.close()
+     # if conn is not None:
+          # cur.close()
+          # conn.close()
           print('Database connection closed.')
     return event
