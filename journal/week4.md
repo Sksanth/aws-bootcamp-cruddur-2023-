@@ -564,7 +564,8 @@ FROM public.activities
 LEFT JOIN public.users ON users.uuid = activities.user_uuid
 ORDER BY activities.created_at DESC
 ```
-    
+![createUser activity success](https://user-images.githubusercontent.com/102387885/226194854-fc69c595-ee1b-491d-93bf-45038d72b9ac.png)
+
     
 ### File in the codebase
 [seed.sql](https://github.com/Sksanth/aws-bootcamp-cruddur-2023-/blob/main/backend-flask/db/seed.sql)
