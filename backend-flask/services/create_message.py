@@ -1,4 +1,4 @@
-import uuid
+#import uuid
 from datetime import datetime, timedelta, timezone
 from lib.db import db
 from lib.ddb import Ddb
@@ -28,7 +28,7 @@ class CreateMessage:
     if model['errors']:
       # return what we provided
       model['data'] = {
-        'display_name': 'Andrew Brown',
+        'display_name': 'sasi',
         'handle':  user_sender_handle,
         'message': message
       }
