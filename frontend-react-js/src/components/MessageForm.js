@@ -17,8 +17,9 @@ export default function ActivityForm(props) {
   const onsubmit = async (event) => {
     event.preventDefault();
     try {
-      //const backend_url = `${process.env.REACT_APP_BACKEND_URL}/api/messages`
-      const backend_url = `https://4567-sksanth-awsbootcampcrud-vpv8und4ett.ws-us92.gitpod.io/api/messages`
+      const backend_url = `${process.env.REACT_APP_BACKEND_URL}/api/messages`
+      //const backend_url = `https://4567-sksanth-awsbootcampcrud-vpv8und4ett.ws-us92.gitpod.io/api/messages`
+      console.log('BACKEND URL', backend_url);
       console.log('onsubmit payload', message)
       let json = { 'message': message }
       if (params.handle) {

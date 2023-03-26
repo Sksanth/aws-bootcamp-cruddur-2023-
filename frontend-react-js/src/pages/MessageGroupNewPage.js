@@ -19,8 +19,9 @@ export default function MessageGroupPage() {
 
   const loadUserShortData = async () => {
     try {
-      //const backend_url = `${process.env.REACT_APP_BACKEND_URL}/api/users/@${params.handle}/short`
-      const backend_url = `https://4567-sksanth-awsbootcampcrud-vpv8und4ett.ws-us92.gitpod.io/api/users/@${params.handle}/short`
+      const backend_url = `${process.env.REACT_APP_BACKEND_URL}/api/users/@${params.handle}/short`
+      //const backend_url = `https://4567-sksanth-awsbootcampcrud-vpv8und4ett.ws-us92.gitpod.io/api/users/@${params.handle}/short`
+      console.log('BACKEND URL', backend_url);
       const res = await fetch(backend_url, {
         method: "GET"
       });
