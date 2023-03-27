@@ -361,6 +361,9 @@ chmod u+x bin/ddb/seed
 ./bin/ddb/seed
 ```
 
+![ddbseedFillermsg](https://user-images.githubusercontent.com/102387885/227959165-4c184d03-4ed7-4038-91df-34037272f9ef.png)
+
+
 **"scan"**
 ```
 #!/usr/bin/env python3
@@ -558,3 +561,704 @@ chmod u+x bin/cognito/list-users
 ``` 
 
 ### Implement Conversations with DynamoDB
+```
+AWS_COGNITO_USER_POOL_ID="us-east-1_*****"
+gp env AWS_COGNITO_USER_POOL_ID="us-east-1_*****"
+```
+Add ```  AWS_ENDPOINT_URL: "http://dynamodb-local:8000" ``` in the ```docker-compose.yml``` file
+In the ```gitpod.yml``` file add
+```
+  - name: flask
+    command: |
+      cd backend-flask
+      pip install -r requirements.txt
+```
+#### Create a file```ddb.py``` under ```backend-flask/lib``` folder
+```
+import boto3
+import sys
+from datetime import datetime, timedelta, timezone
+import uuid
+import os
+import botocore.exceptions
+
+class Ddb:
+  def client():
+    endpoint_url = os.getenv("AWS_ENDPOINT_URL")
+    if endpoint_url:
+      attrs = { 'endpoint_url': endpoint_url }
+    else:
+      attrs = {}
+    dynamodb = boto3.client('dynamodb',**attrs)
+    return dynamodb
+  def list_message_groups(client,my_user_uuid):
+    year = str(datetime.now().year)
+    table_name = 'cruddur-messages'
+    query_params = {
+      'TableName': table_name,
+      'KeyConditionExpression': 'pk = :pk AND begins_with(sk,:year)',
+      'ScanIndexForward': False,
+      'Limit': 20,
+      'ExpressionAttributeValues': {
+        ':year': {'S': year },
+        ':pk': {'S': f"GRP#{my_user_uuid}"}
+      }
+    }
+    print('query-params:',query_params)
+    print(query_params)
+    # query the table
+    response = client.query(**query_params)
+    items = response['Items']
+    
+
+    results = []
+    for item in items:
+      last_sent_at = item['sk']['S']
+      results.append({
+        'uuid': item['message_group_uuid']['S'],
+        'display_name': item['user_display_name']['S'],
+        'handle': item['user_handle']['S'],
+        'message': item['message']['S'],
+        'created_at': last_sent_at
+      })
+    return results
+  def list_messages(client,message_group_uuid):
+    year = str(datetime.now().year)
+    table_name = 'cruddur-messages'
+    query_params = {
+      'TableName': table_name,
+      'KeyConditionExpression': 'pk = :pk AND begins_with(sk,:year)',
+      'ScanIndexForward': False,
+      'Limit': 20,
+      'ExpressionAttributeValues': {
+        ':year': {'S': year },
+        ':pk': {'S': f"MSG#{message_group_uuid}"}
+      }
+    }
+
+    response = client.query(**query_params)
+    items = response['Items']
+    items.reverse()
+    results = []
+    for item in items:
+      created_at = item['sk']['S']
+      results.append({
+        'uuid': item['message_uuid']['S'],
+        'display_name': item['user_display_name']['S'],
+        'handle': item['user_handle']['S'],
+        'message': item['message']['S'],
+        'created_at': created_at
+      })
+    return results
+  def create_message(client,message_group_uuid, message, my_user_uuid, my_user_display_name, my_user_handle):
+    now = datetime.now(timezone.utc).astimezone().isoformat()
+    created_at = now
+    message_uuid = str(uuid.uuid4())
+
+    record = {
+      'pk':   {'S': f"MSG#{message_group_uuid}"},
+      'sk':   {'S': created_at },
+      'message': {'S': message},
+      'message_uuid': {'S': message_uuid},
+      'user_uuid': {'S': my_user_uuid},
+      'user_display_name': {'S': my_user_display_name},
+      'user_handle': {'S': my_user_handle}
+    }
+    # insert the record into the table
+    table_name = 'cruddur-messages'
+    response = client.put_item(
+      TableName=table_name,
+      Item=record
+    )
+    # print the response
+    print(response)
+    return {
+      'message_group_uuid': message_group_uuid,
+      'uuid': my_user_uuid,
+      'display_name': my_user_display_name,
+      'handle':  my_user_handle,
+      'message': message,
+      'created_at': created_at
+    }
+  def create_message_group(client, message,my_user_uuid, my_user_display_name, my_user_handle, other_user_uuid, other_user_display_name, other_user_handle):
+    print('== create_message_group.1')
+    table_name = 'cruddur-messages'
+
+    message_group_uuid = str(uuid.uuid4())
+    message_uuid = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).astimezone().isoformat()
+    last_message_at = now
+    created_at = now
+    print('== create_message_group.2')
+
+    my_message_group = {
+      'pk': {'S': f"GRP#{my_user_uuid}"},
+      'sk': {'S': last_message_at},
+      'message_group_uuid': {'S': message_group_uuid},
+      'message': {'S': message},
+      'user_uuid': {'S': other_user_uuid},
+      'user_display_name': {'S': other_user_display_name},
+      'user_handle':  {'S': other_user_handle}
+    }
+
+    print('== create_message_group.3')
+    other_message_group = {
+      'pk': {'S': f"GRP#{other_user_uuid}"},
+      'sk': {'S': last_message_at},
+      'message_group_uuid': {'S': message_group_uuid},
+      'message': {'S': message},
+      'user_uuid': {'S': my_user_uuid},
+      'user_display_name': {'S': my_user_display_name},
+      'user_handle':  {'S': my_user_handle}
+    }
+
+    print('== create_message_group.4')
+    message = {
+      'pk':   {'S': f"MSG#{message_group_uuid}"},
+      'sk':   {'S': created_at },
+      'message': {'S': message},
+      'message_uuid': {'S': message_uuid},
+      'user_uuid': {'S': my_user_uuid},
+      'user_display_name': {'S': my_user_display_name},
+      'user_handle': {'S': my_user_handle}
+    }
+
+    items = {
+      table_name: [
+        {'PutRequest': {'Item': my_message_group}},
+        {'PutRequest': {'Item': other_message_group}},
+        {'PutRequest': {'Item': message}}
+      ]
+    }
+
+    try:
+      print('== create_message_group.try')
+      # Begin the transaction
+      response = client.batch_write_item(RequestItems=items)
+      return {
+        'message_group_uuid': message_group_uuid
+      }
+    except botocore.exceptions.ClientError as e:
+      print('== create_message_group.error')
+      print(e)
+```
+
+#### Create a file ``` update_cognito_user_ids``` under ```/bin/db/``` and enter
+```
+#!/usr/bin/env python3
+
+import boto3
+import os
+import sys
+
+print("== db-update-cognito-user-ids")
+
+current_path = os.path.dirname(os.path.abspath(__file__))
+parent_path = os.path.abspath(os.path.join(current_path, '..', '..'))
+sys.path.append(parent_path)
+from lib.db import db
+
+def update_users_with_cognito_user_id(handle,sub):
+  sql = """
+    UPDATE public.users
+    SET cognito_user_id = %(sub)s
+    WHERE
+      users.handle = %(handle)s;
+  """
+  db.query_commit(sql,{
+    'handle' : handle,
+    'sub' : sub
+  })
+
+def get_cognito_user_ids():
+  userpool_id = os.getenv("AWS_COGNITO_USER_POOL_ID")
+  client = boto3.client('cognito-idp')
+  params = {
+    'UserPoolId': userpool_id,
+    'AttributesToGet': [
+        'preferred_username',
+        'sub'
+    ]
+  }
+  response = client.list_users(**params)
+  users = response['Users']
+  dict_users = {}
+  for user in users:
+    attrs = user['Attributes']
+    sub    = next((a for a in attrs if a["Name"] == 'sub'), None)
+    handle = next((a for a in attrs if a["Name"] == 'preferred_username'), None)
+    dict_users[handle['Value']] = sub['Value']
+  return dict_users
+
+
+users = get_cognito_user_ids()
+
+for handle, sub in users.items():
+  print('----',handle,sub)
+  update_users_with_cognito_user_id(
+    handle=handle,
+    sub=sub
+  )
+```
+Add ``` python "$bin_path/db/update_cognito_user_ids"``` in the ```bin/db/setup``` file
+Execute
+```chmod u+x bin/db/update_cognito_user_ids 
+./bin/db/setup
+./bin/db/update_cognito_user_ids
+```
+
+![updateCognitoUserIdCORRECT](https://user-images.githubusercontent.com/102387885/227954065-a9f39f5f-6daf-46db-9a0a-2f0cda8fb506.png)
+
+
+In the  ```backend-flask/services/message_groups.py``` file add
+```
+ from lib.ddb import Ddb
+from lib.db import db
+```
+Replace the ```user_handle``` to ```cognito_user_id```
+And modify the codes with the contents
+```
+    sql = db.template('users','uuid_from_cognito_user_id')
+    my_user_uuid = db.query_value(sql,{
+      'cognito_user_id': cognito_user_id
+    })
+
+    print(f"UUID: {my_user_uuid}")
+
+    ddb = Ddb.client()
+    data = Ddb.list_message_groups(ddb, my_user_uuid)
+    print("list_message_groups:",data)
+
+    model['data'] = data
+```
+#### Create a folder ```users``` under ```db/sql/``` and file ``` uuid_from_cognito_user_id.sql```
+```
+SELECT
+  users.uuid
+FROM public.users
+WHERE 
+  users.cognito_user_id = %(cognito_user_id)s
+LIMIT 1
+```
+
+#### Create a new folder ```lib``` under ``` frontend-react-js/src/ ``` and file ```CheckAuth.js```
+```
+import { Auth } from 'aws-amplify';
+
+const checkAuth = async (setUser) => {
+  Auth.currentAuthenticatedUser({
+    // Optional, By default is false. 
+    // If set to true, this call will send a 
+    // request to Cognito to get the latest user data
+    bypassCache: false 
+  })
+  .then((user) => {
+    console.log('user',user);
+    return Auth.currentAuthenticatedUser()
+  }).then((cognito_user) => {
+      setUser({
+        display_name: cognito_user.attributes.name,
+        handle: cognito_user.attributes.preferred_username
+      })
+  })
+  .catch((err) => console.log(err));
+};
+
+export default checkAuth;
+```
+
+In the ```frontend-react-js/src/pages/HomefeedPage.js```
+```import checkAuth from '../lib/CheckAuth'; ```   
+
+In the ```frontend-react-js/src/pages/MessageGroupsPage.js and MessageGroupPage.js ```  add
+```import checkAuth from '../lib/CheckAuth'; ```
+```
+headers: {
+  Authorization: `Bearer ${localStorage.getItem("access_token")}`
+},
+```
+In the ```frontend-react-js/src/pages/MessageGroupPage.js``` file  add 
+```
+const backend_url = `${process.env.REACT_APP_BACKEND_URL}/api/messages/${params.message_group_uuid}` 
+```
+And  in the ``` frontend-react-js/src/components/messageform.js ``` file add
+```
+ import { json, useParams } from 'react-router-dom';
+```
+```
+let json = { 'message': message }
+if (params.handle) {
+  json.handle = params.handle
+} else {
+  json.message_group_uuid = params.message_group_uuid
+}
+
+```
+```
+'Authorization': `Bearer ${localStorage.getItem("access_token")}`,
+```
+```
+body: JSON.stringify(json)    
+```
+```
+console.log('data:',data)
+if (data.message_group_uuid) {
+  console.log('redirect to message group')
+  window.location.href = `/messages/${data.message_group_uuid}`
+} else {
+  props.setMessages(current => [...current,data]);
+}
+```
+
+In the ```backend-flask/services/message_groups.py``` file add
+
+```
+from lib.ddb import Ddb
+from lib.db import db
+```
+```
+ def run(cognito_user_id):
+```
+```
+sql = db.template('users','uuid_from_cognito_user_id')
+my_user_uuid = db.query_value(sql,{
+  'cognito_user_id': cognito_user_id
+})
+
+print(f"UUID: {my_user_uuid}")
+
+ddb = Ddb.client()
+data = Ddb.list_message_groups(ddb, my_user_uuid)
+print("list_message_groups:",data)
+
+model['data'] = data
+```
+
+Do docker compose up and check port 3000
+
+```
+Run ./bin/ddb/schema-load
+./bin/ddb/seed 
+ ./bin/ddb/patterns/list-conversations
+```
+
+In the ``` frontend-react-js/src/App.js ``` add
+```
+import MessageGroupNewPage from './pages/MessageGroupNewPage';
+```
+```
+    path: "/messages/new/:handle",
+    element: <MessageGroupNewPage />
+  },
+  {
+    path: "/messages/:message_group_uuid",
+```
+#### Create a new file ``` create_message_users.sql ``` under ```backend-flsk/db/sql/users``` and enter the contents
+```
+SELECT 
+  users.uuid,
+  users.display_name,
+  users.handle,
+  CASE users.cognito_user_id = %(cognito_user_id)s
+  WHEN TRUE THEN
+    'sender'
+  WHEN FALSE THEN
+    'recv'
+  ELSE
+    'other'
+  END as kind
+FROM public.users
+WHERE
+  users.cognito_user_id = %(cognito_user_id)s
+  OR 
+  users.handle = %(user_receiver_handle)s
+```
+
+
+In the ``` frontend-react-js/src/pages/MessageGroupNewPage.js ``` create ``` MessageGroupNewPage.js``` file
+```
+import './MessageGroupPage.css';
+import React from "react";
+import { useParams } from 'react-router-dom';
+
+import DesktopNavigation  from '../components/DesktopNavigation';
+import MessageGroupFeed from '../components/MessageGroupFeed';
+import MessagesFeed from '../components/MessageFeed';
+import MessagesForm from '../components/MessageForm';
+import checkAuth from '../lib/CheckAuth';
+
+export default function MessageGroupPage() {
+  const [otherUser, setOtherUser] = React.useState([]);
+  const [messageGroups, setMessageGroups] = React.useState([]);
+  const [messages, setMessages] = React.useState([]);
+  const [popped, setPopped] = React.useState([]);
+  const [user, setUser] = React.useState(null);
+  const dataFetchedRef = React.useRef(false);
+  const params = useParams();
+
+  const loadUserShortData = async () => {
+    try {
+      const backend_url = `${process.env.REACT_APP_BACKEND_URL}/api/users/@${params.handle}/short`
+      const res = await fetch(backend_url, {
+        method: "GET"
+      });
+      let resJson = await res.json();
+      if (res.status === 200) {
+        console.log('other user:',resJson)
+        setOtherUser(resJson)
+      } else {
+        console.log(res)
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };  
+
+  const loadMessageGroupsData = async () => {
+    try {
+      const backend_url = `${process.env.REACT_APP_BACKEND_URL}/api/message_groups`
+      const res = await fetch(backend_url, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`
+        },
+        method: "GET"
+      });
+      let resJson = await res.json();
+      if (res.status === 200) {
+        setMessageGroups(resJson)
+      } else {
+        console.log(res)
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };  
+
+  React.useEffect(()=>{
+    //prevents double call
+    if (dataFetchedRef.current) return;
+    dataFetchedRef.current = true;
+
+    loadMessageGroupsData();
+    loadUserShortData();
+    checkAuth(setUser);
+  }, [])
+  return (
+    <article>
+      <DesktopNavigation user={user} active={'home'} setPopped={setPopped} />
+      <section className='message_groups'>
+        <MessageGroupFeed otherUser={otherUser} message_groups={messageGroups} />
+      </section>
+      <div className='content messages'>
+        <MessagesFeed messages={messages} />
+        <MessagesForm setMessages={setMessages} />
+      </div>
+    </article>
+  );
+}
+```
+
+Update ```seed.sql``` and add extra values  ```   ('Londo Mollari','lmollari@centari.com' ,'londo' ,'MOCK');   ```  
+Insert into users manually
+```
+Run ./bin/db/connect 
+INSERT INTO public.users(…..copy here) VALUES  ('Londo Mollari','lmollari@centari.com' ,'londo' ,'MOCK');
+```
+#### Create a new file ``` users_short.py``` - ``` backend-flask/services/users_short.py ```
+```
+from lib.db import db
+
+class UsersShort:
+  def run(handle):
+    sql = db.template('users','short')
+    results = db.query_object_json(sql,{
+      'handle': handle
+    })
+    return results
+```
+#### Create a new file ```short.sql``` under ```backend-flask/db/sql/users/short.sql```
+```
+SELECT
+  users.uuid,
+  users.handle,
+  users.display_name
+FROM public.users
+WHERE 
+  users.handle = %(handle)s
+```
+
+#### Create a new file ```MessageGroupNewItem.js``` under ``` frontend-react-js/src/components/MessageGroupNewItem.js ```
+```
+import './MessageGroupItem.css';
+import { Link } from "react-router-dom";
+
+export default function MessageGroupNewItem(props) {
+  return (
+
+    <Link className='message_group_item active' to={`/messages/new/`+props.user.handle}>
+      <div className='message_group_avatar'></div>
+      <div className='message_content'>
+        <div classsName='message_group_meta'>
+          <div className='message_group_identity'>
+            <div className='display_name'>{props.user.display_name}</div>
+            <div className="handle">@{props.user.handle}</div>
+          </div>{/* activity_identity */}
+        </div>{/* message_meta */}
+      </div>{/* message_content */}
+    </Link>
+  );
+}
+```
+
+![patternd result](https://user-images.githubusercontent.com/102387885/227974854-d6a28c29-49ab-4f5a-8722-15ac828f3a0a.png)
+
+### DyanamoDB Stream 
+Updating a message group using DynamoDB streams
+#### Create a ```lamba function``` in AWS Lambda called ``` cruddur-messaging-stream``` and enter the contents in the code section
+And also create a lambda file ```cruddur-messaging-stream.py``` under aws/lambdas and enter the same contents
+```
+import json
+import boto3
+from boto3.dynamodb.conditions import Key, Attr
+
+dynamodb = boto3.resource(
+ 'dynamodb',
+ region_name='us-east-1',
+ endpoint_url="http://dynamodb.us-east-1.amazonaws.com"
+)
+
+def lambda_handler(event, context):
+  print('event-data',event)
+
+  eventName = event['Records'][0]['eventName']
+  if (eventName == 'REMOVE'):
+    print("skip REMOVE event")
+    return
+  pk = event['Records'][0]['dynamodb']['Keys']['pk']['S']
+  sk = event['Records'][0]['dynamodb']['Keys']['sk']['S']
+  if pk.startswith('MSG#'):
+    group_uuid = pk.replace("MSG#","")
+    message = event['Records'][0]['dynamodb']['NewImage']['message']['S']
+    print("GRUP ===>",group_uuid,message)
+    
+    table_name = 'cruddur-messages'
+    index_name = 'message-group-sk-index'
+    table = dynamodb.Table(table_name)
+    data = table.query(
+      IndexName=index_name,
+      KeyConditionExpression=Key('message_group_uuid').eq(group_uuid)
+    )
+    print("RESP ===>",data['Items'])
+    
+    # recreate the message group rows with new SK value
+    for i in data['Items']:
+      delete_item = table.delete_item(Key={'pk': i['pk'], 'sk': i['sk']})
+      print("DELETE ===>",delete_item)
+      
+      response = table.put_item(
+        Item={
+          'pk': i['pk'],
+          'sk': sk,
+          'message_group_uuid':i['message_group_uuid'],
+          'message':message,
+          'user_display_name': i['user_display_name'],
+          'user_handle': i['user_handle'],
+          'user_uuid': i['user_uuid']
+        }
+      )
+      print("CREATE ===>",response)
+```
+#### Attach policy ```AWSLambdaInvocation-DynamoDB``` and create a policy called ```cruddur-message-stream-policy``` 
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:PutItem",
+                "dynamodb:DeleteItem",
+                "dynamodb:Query"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:us-east-1:487893315666:table/cruddur-messages/index/message-group-sk-index",
+                "arn:aws:dynamodb:us-east-1:487893315666:table/cruddur-messages"
+            ]
+        }
+    ]
+}
+```
+And create  a folder called ```policies``` under ```aws``` and create a file with the same name ``` cruddur-message-stream-policy.json``` and enter the above contents.
+
+#### Update the ```backend-flask/bin/ddb/schemaload``` file
+```
+    {
+      'AttributeName': 'message_group_uuid',
+      'AttributeType': 'S'
+    },
+```
+
+```
+  GlobalSecondaryIndexes= [{
+    'IndexName':'message-group-sk-index',
+    'KeySchema':[{
+      'AttributeName': 'message_group_uuid',
+      'KeyType': 'HASH'
+    },{
+      'AttributeName': 'sk',
+      'KeyType': 'RANGE'
+    }],
+    'Projection': {
+      'ProjectionType': 'ALL'
+    },
+    'ProvisionedThroughput': {
+      'ReadCapacityUnits': 5,
+      'WriteCapacityUnits': 5
+    },
+  }],
+```
+
+Execute ``` ./bin/ddb/schema-load prod ```
+
+Check the ```DynamoDB``` console for table creation and go to the ```Exports and streams/ DynamoDB stream details``` tab, choose ```new image ```
+
+To setup a trigger, click on the ``` create a trigger``` tab and choose the lamba function ``` cruddur-messaging-stream ``` 
+In the ```docker-compose.yml``` comment out the ```AWS_ENDPOINT_URL```
+Do ```docker compose up```
+Append /new/thv in the frontend url 
+
+![newTHVimage](https://user-images.githubusercontent.com/102387885/227974548-2528d04c-dec1-45e3-8301-8fc078642a80.png)
+
+Check the trigger in the AWS Lamda console under ```monitor``` tab to see the log events
+
+### File in the codebase
+[seed.sql ](https://github.com/Sksanth/aws-bootcamp-cruddur-2023-/blob/main/backend-flask/db/seed.sql)
+
+[create_message_users.sql ](https://github.com/Sksanth/aws-bootcamp-cruddur-2023-/blob/main/backend-flask/db/sql/users/create_message_users.sql)
+
+[short.sql](https://github.com/Sksanth/aws-bootcamp-cruddur-2023-/blob/main/backend-flask/db/sql/users/short.sql)
+
+[uuid_from_cognito_user_id.sql](https://github.com/Sksanth/aws-bootcamp-cruddur-2023-/blob/main/backend-flask/db/sql/users/uuid_from_cognito_user_id.sql)
+
+[update_cognito_user_ids](https://github.com/Sksanth/aws-bootcamp-cruddur-2023-/blob/main/backend-flask/bin/db/update_cognito_user_ids)
+
+[schema-load](https://github.com/Sksanth/aws-bootcamp-cruddur-2023-/blob/main/backend-flask/bin/ddb/schema-load)
+
+[list-users](https://github.com/Sksanth/aws-bootcamp-cruddur-2023-/blob/main/backend-flask/bin/cognito/list-users)
+
+[ddb.py](https://github.com/Sksanth/aws-bootcamp-cruddur-2023-/blob/main/backend-flask/lib/ddb.py)
+
+[users_short.py](https://github.com/Sksanth/aws-bootcamp-cruddur-2023-/blob/main/backend-flask/services/users_short.py)
+
+[cruddur-message-stream-policy.json](https://github.com/Sksanth/aws-bootcamp-cruddur-2023-/blob/main/aws/policies/cruddur-message-stream-policy.json)
+
+[cruddur-messaging-stream.py](https://github.com/Sksanth/aws-bootcamp-cruddur-2023-/blob/main/aws/lambdas/cruddur-messaging-stream.py)
+
+[CheckAuth.js](https://github.com/Sksanth/aws-bootcamp-cruddur-2023-/blob/main/frontend-react-js/src/lib/CheckAuth.js)
+
+[MessageGroupNewItem.js](https://github.com/Sksanth/aws-bootcamp-cruddur-2023-/blob/main/frontend-react-js/src/components/MessageGroupNewItem.js)
+
+[MessageGroupNewPage.js](https://github.com/Sksanth/aws-bootcamp-cruddur-2023-/blob/main/frontend-react-js/src/pages/MessageGroupNewPage.js)
+
+
