@@ -29,7 +29,8 @@ class CreateMessage:
       # return what we provided
       model['data'] = {
         'display_name': 'sasi',
-        'handle':  user_sender_handle,
+        #'handle':  user_sender_handle,
+        'handle': cognito_user_id,
         'message': message
       }
     else:
