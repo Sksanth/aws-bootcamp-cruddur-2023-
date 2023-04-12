@@ -19,7 +19,7 @@ export default function MessageGroupsPage() {
       const access_token = localStorage.getItem("access_token")
       const res = await fetch(backend_url, {
         headers: {
-          Authorization: `Bearer ${"access_token"}`
+          Authorization: `Bearer ${access_token}`
         },
         method: "GET"
       });
