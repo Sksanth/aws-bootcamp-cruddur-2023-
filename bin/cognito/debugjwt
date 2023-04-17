@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+require 'jwt'
+
+token = $DEBUG_JWT 
+
+decoded_token = JWT.decode token, nil, false
+puts decoded_token

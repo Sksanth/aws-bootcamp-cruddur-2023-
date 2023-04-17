@@ -45,14 +45,15 @@ import rollbar.contrib.flask
 from flask import got_request_exception
 
 # CloudWatch logs -----
-# Configuring Logger to Use CloudWatch
-#LOGGER = logging.getLogger(__name__)
-#LOGGER.setLevel(logging.DEBUG)
-#console_handler = logging.StreamHandler()
-#cw_handler = watchtower.CloudWatchLogHandler(log_group='cruddur')
-#LOGGER.addHandler(console_handler)
-#LOGGER.addHandler(cw_handler)
-#LOGGER.info("test log")
+#Configuring Logger to Use CloudWatch
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
+console_handler = logging.StreamHandler()
+cw_handler = watchtower.CloudWatchLogHandler(log_group='cruddur2')
+LOGGER.addHandler(console_handler)
+LOGGER.addHandler(cw_handler)
+LOGGER.info("test log 2")
+
 
 # Honeycomb---------
 # Initialize tracing and an exporter that can send data to Honeycomb
@@ -130,15 +131,16 @@ def rollbar_test():
     return "Hello World!"
 
 # CloudWatch logs -----
-#@app.after_request
-#def after_request(response):
- #   timestamp = strftime('[%Y-%b-%d %H:%M]')
-  #  LOGGER.error('%s %s %s %s %s %s', timestamp, request.remote_addr, request.method, request.scheme, request.full_path, response.status)
-   # return response
+# @app.after_request
+# def after_request(response):
+#    timestamp = strftime('[%Y-%b-%d %H:%M]')
+#    LOGGER.error('%s %s %s %s %s %s', timestamp, request.remote_addr, request.method, request.scheme, request.full_path, response.status)
+#    return response
 
 @app.route("/api/message_groups", methods=['GET'])
 def data_message_groups():
     access_token = extract_access_token(request.headers)
+    LOGGER.info(f"access_token:message_groups:{access_token}")
     try:
       claims = cognito_jwt_token.verify(access_token)
       # authenicatied request
@@ -219,6 +221,8 @@ def data_create_message():
 #@xray_recorder.capture('activities_home')
 def data_home():
   access_token = extract_access_token(request.headers)
+  #LOGGER.info("access_token", "home", access_token)
+  LOGGER.info(f"access_token:home:{access_token}")
   try:
     claims = cognito_jwt_token.verify(access_token)
     # authenicatied request
