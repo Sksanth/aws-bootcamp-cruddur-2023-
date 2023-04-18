@@ -94,6 +94,12 @@ class CognitoJwtToken:
     def _check_audience(self, claims):
         # and the Audience  (use claims['client_id'] if verifying an access token)
         audience = claims["aud"] if "aud" in claims else claims["client_id"]
+        print("===============================")
+        print("sasi:aud", audience)
+        print("sasi:client_id", self.user_pool_client_id)
+        print("sasi:id", audience != self.user_pool_client_id)
+        print("sasi:aud:length", len(audience))
+        print("sasi:client_id:length", len(self.user_pool_client_id))
         if audience != self.user_pool_client_id:
             raise TokenVerifyError("Token was not issued for this audience")
 
