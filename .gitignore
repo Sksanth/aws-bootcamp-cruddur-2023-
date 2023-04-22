@@ -1,2 +1,4 @@
-docker/dynamodb/shared-local-instance.db
-docker/dynamodb/shared-local-instance.db
+docker/**/*
+frontend-react-js/build/*
+*.env
+node_modules
