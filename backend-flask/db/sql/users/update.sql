@@ -1,4 +1,3 @@
-@@ -0,0 +1,7 @@
 UPDATE public.users 
 SET 
   bio = %(bio)s,
