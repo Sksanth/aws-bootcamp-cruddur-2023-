@@ -14,7 +14,9 @@ export default function ProfileHeading(props) {
     <div className='title'>{props.profile.display_name}</div>
     <div className="cruds_count">{props.profile.cruds_count} Cruds</div>
     <div className="banner" style={styles} >
-      <ProfileAvatar id={props.profile.cognito_user_uuid} />
+      <div className="avatar">
+        <img src="https://assets.skscorp.net/avatars/data.jpg"></img>
+      </div>
     </div>
     <div className="info">
       <div className='id'>
