@@ -1,0 +1,8 @@
+[deploy]
+bucket = 'sks-cfn-artifacts'
+region = 'us-east-1'
+stack_name = 'CrdSrvBackendFlask'
+
+[parameters]
+EnvFrontendUrl = 'https://skscorp.net'
+EnvBackendUrl = 'https://api.skscorp.net'

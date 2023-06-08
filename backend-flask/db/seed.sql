@@ -3,6 +3,7 @@ INSERT INTO public.users (display_name, handle, email, cognito_user_id)
 VALUES
   ('Sasi', 'sasi' ,'sasi@gmail.com','MOCK'),
   ('sasi thv', 'thv','sasithv@sk.com' ,'MOCK'),
+  ('sasi tg', 'sasitg' ,'tgsasi@cloudproject.com' ,'MOCK'),
   ('Londo Mollari','londo' ,'lmollari@centari.com' ,'MOCK');
   
 
