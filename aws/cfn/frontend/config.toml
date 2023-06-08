@@ -4,6 +4,6 @@ region = 'us-east-1'
 stack_name = 'CrdFrontend'
 
 [parameters]
-CertificateArn = 'arn:aws:acm:us-east-1:********5666:certificate/********-****-****-****-************'
+CertificateArn = 'arn:aws:acm:us-east-1:487893315666:certificate/28fb54a8-29c4-40c3-877f-ab49ad9fddb9'
 WwwBucketName = 'www.skscorp.net'
 RootBucketName = 'skscorp.net'
