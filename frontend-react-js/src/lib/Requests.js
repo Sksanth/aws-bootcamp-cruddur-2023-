@@ -1,9 +1,9 @@
 import {getAccessToken} from 'lib/CheckAuth';
 
 async function request(method,url,payload_data,options){
-    console.log(options)
-    if (options.hasOwnProperty('setErrors')){
-      options.setErrors('')
+  console.log(options)
+  if (options.hasOwnProperty('setErrors')){
+    options.setErrors('')
   }
   let res
   try { 
@@ -15,9 +15,9 @@ async function request(method,url,payload_data,options){
     }
 
     if (options.hasOwnProperty('auth') && options.auth === true){
-        await getAccessToken()
-        const access_token = localStorage.getItem("access_token")
-        attrs.headers['Authorization'] = `Bearer ${access_token}`
+      await getAccessToken()
+      const access_token = localStorage.getItem("access_token")
+      attrs.headers['Authorization'] = `Bearer ${access_token}`
     }
 
     if (method !== 'GET') {
@@ -29,7 +29,7 @@ async function request(method,url,payload_data,options){
     if (res.status === 200) {
       options.success(data)
     } else {
-      if (setErrors !== null){
+      if (options.setErrors !== null){
         options.setErrors(data)
       }
       console.log(res,data)
