@@ -18,8 +18,8 @@ export default function ActivityItem(props) {
   }
 
   const attrs = {}
-    attrs.className = 'activity_item clickable'
-    attrs.onClick = click
+  attrs.className = 'activity_item clickable'
+  attrs.onClick = click
   
 
   return (

@@ -39,14 +39,14 @@
 }
 
 .activity_content .activity_identity .display_name {
-font-weight: 800;
+  font-weight: 800;
   color: #fff;
 }
 .activity_content .activity_identity .display_name:hover {
   text-decoration: underline;
 }
 
-.activity_content  .activity_identity .handle {
+.activity_content .activity_identity .handle {
   color: rgb(255,255,255,0.5);
 }
 
