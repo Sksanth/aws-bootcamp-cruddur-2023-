@@ -6,3 +6,4 @@ stack_name = 'CrdSrvBackendFlask'
 [parameters]
 EnvFrontendUrl = 'https://skscorp.net'
 EnvBackendUrl = 'https://api.skscorp.net'
+DDB_MESSAGE_TABLE='CrdDdb-DynamoDBTable-CGT6KK4HCZ7T'
