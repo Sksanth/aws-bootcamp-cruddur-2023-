@@ -6,10 +6,10 @@ async function request(method,url,payload_data,options){
     options.setErrors('')
   }
   let res
-  try { 
+  try {
     const attrs = {
       method: method,
-      headers: {        
+      headers: {      
         'Content-Type': 'application/json'
       }
     }
