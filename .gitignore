@@ -6,3 +6,4 @@ node_modules
 build.toml
 tmp/*
 
+session-manager-plugin.deb
